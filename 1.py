@@ -7,7 +7,7 @@ from datetime import datetime
 st.set_page_config(page_title="Учет КП v40.2 Cloud", layout="wide")
 
 # --- ВСТАВЬТЕ ВАШУ ССЫЛКУ ТУТ ---
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/ВАШ_ID_ЗДЕСЬ/edit?usp=sharing"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1HYkcxtOiEhV7-jOi6TGDxT-exQv78guO9g7b4JVBxAc/edit?usp=sharing"
 
 # 2. Подключение
 conn = st.connection("gsheets", type=GSheetsConnection)
