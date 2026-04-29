@@ -8,7 +8,7 @@ st.set_page_config(page_title="Учет КП Cloud", layout="wide")
 # ВАША ССЫЛКА (экспортный формат)
 # Мы меняем /edit на /export?format=csv, чтобы Pandas читал таблицу без ошибок
 SHEET_ID = "1HYkcxtOiEhV7-jOi6TGDxT-exQv78guO9g7b4JVBxAc"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+CSV_URL = f"https://script.google.com/macros/s/AKfycbzV--LB0W0TqIDsBqgSeLKbFe8InZLB6l3y25KkwanrgXVx53hRb-PPWKlh93WkFquQ/exec"
 
 # Функция чтения через стандартный Pandas
 def get_data():
