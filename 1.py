@@ -5,10 +5,10 @@ import urllib.parse
 from datetime import datetime
 
 # 1. Настройка страницы
-st.set_page_config(page_title="Учет КП v50.0", layout="wide")
+st.set_page_config(page_title="Учет КП v50.1", layout="wide")
 
-# --- ВСТАВЬТЕ ВАШУ НОВУЮ ССЫЛКУ ИЗ ШАГА 1 ---
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxc5NZxQ44D9gdIw75QiW8n2p4vsNajbw7d-CdtXZgIbp2A1TScrPUcxjJl0XhH1Evv/exec"
+# --- ВАША ССЫЛКА ---
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhvCHgy-R5hgzeSurDFA7HPb8D4hQrdcITHeUcuPxa5fzx2BSVZXIWGyg9wZtrjQHL/exec"
 
 # Ссылка для архива (чтение)
 SHEET_ID = "1HYkcxtOiEhV7-jOi6TGDxT-exQv78guO9g7b4JVBxAc"
@@ -37,7 +37,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚂 СИСТЕМА УЧЕТА КП (БЕЗОТКАЗНЫЙ МЕТОД)")
+st.title("🚂 СИСТЕМА УЧЕТА КП")
 
 # 3. Ввод данных
 c1, c2, _ = st.columns([2, 2, 6])
@@ -47,17 +47,24 @@ date_m = c2.date_input("📅 Дата замера", datetime.now())
 axes_count = 12 if len(loco) == 2 else 6
 st.write(f"#### Сетка замера ({axes_count} осей)")
 
+# Названия колонок (должны точно совпадать)
 cols_name = ["Гр Л", "Гр П", "Пр Л", "Пр П", "qR Л", "qR П", "Банд Л", "Банд П"]
 df_template = pd.DataFrame(0.0, index=[f"Ось {i+1}" for i in range(axes_count)], columns=cols_name)
 
+# Редактор таблицы
 edited_df = st.data_editor(df_template, width="stretch", height=400 if axes_count == 12 else 260)
 
-# 4. Формирование ссылки
+# 4. Формирование ссылки (ИСПРАВЛЕННЫЙ БЛОК)
 payload = []
 for i, (idx, row) in enumerate(edited_df.iterrows(), start=1):
     payload.append([
-        date_m.strftime("%d.%m.%Y"), loco, i,
-        row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]
+        date_m.strftime("%d.%m.%Y"), 
+        loco, 
+        i,
+        row["Гр Л"], row["Гр П"], 
+        row["Пр Л"], row["Пр П"], 
+        row["qR Л"], row["qR П"], 
+        row["Банд Л"], row["Банд П"]
     ])
 
 json_data = json.dumps(payload)
@@ -69,12 +76,12 @@ st.markdown("---")
 # 5. Кнопка отправки
 if loco:
     st.markdown(f'<a href="{final_link}" target="_blank" class="send-button">🚀 ПОДТВЕРДИТЬ И ОТПРАВИТЬ В GOOGLE</a>', unsafe_allow_html=True)
-    st.info("💡 После нажатия откроется новая вкладка Google. Как только увидите надпись 'Успешно', данные уже в таблице. Просто закройте ту вкладку.")
+    st.info("💡 После нажатия откроется новая вкладка. Если увидите 'Success', значит данные в таблице.")
 else:
-    st.warning("⚠️ Введите номер локомотива для активации кнопки отправки.")
+    st.warning("⚠️ Введите номер локомотива.")
 
 # 6. Архив
-if st.checkbox("🔍 Показать последние записи"):
+if st.checkbox("🔍 Показать архив"):
     try:
         df_view = pd.read_csv(CSV_URL)
         st.dataframe(df_view.tail(20), width="stretch")
