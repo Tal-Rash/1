@@ -47,6 +47,7 @@ class WheelTableApp:
         self.create_archive_widgets()
 
     def init_db(self):
+        # Пытаемся создать базу на диске D, если его нет — создаем рядом с программой
         db_path = r"D:\wheels_data.db"
         try:
             self.conn = sqlite3.connect(db_path)
@@ -142,10 +143,11 @@ class WheelTableApp:
         try:
             for idx, row in enumerate(self.all_axes_rows, start=1):
                 v = [float(e.get().replace(',', '.')) if e.get() else 0.0 for e in row["entries"]]
+                # Исправленная строка запроса:
                 self.cursor.execute("INSERT INTO measurements (loco_name, wheel_num, f_l, f_r, w_l, w_r, q_l, q_r, t_l, t_r, date) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (loco, idx, *v, date))
             self.conn.commit()
             self.load_archive()
-            messagebox.showinfo("!", "Данные сохранены")
+            messagebox.showinfo("!", "Данные успешно сохранены")
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось сохранить: {e}")
 
@@ -253,19 +255,4 @@ class WheelTableApp:
                     l.grid(row=cur_row, column=c, padx=1, pady=1); self._bind_mousewheel(l, self.hist_canvas)
                 cur_row += 1
             for c in range(5): 
-                sep = tk.Label(self.hist_res_frame, text="", bg="#f0f0f0", height=1)
-                sep.grid(row=cur_row, column=c, sticky="nsew", padx=1, pady=1); self._bind_mousewheel(sep, self.hist_canvas)
-            cur_row += 1
-
-    def update_loco_lists(self):
-        self.cursor.execute("SELECT DISTINCT loco_name FROM measurements ORDER BY loco_name ASC")
-        names = [r[0] for r in self.cursor.fetchall()]
-        self.loco_input_box['values'] = names
-        self.hist_box['values'] = names
-        self.archive_filter_box['values'] = names
-
-    def show_all_archive(self):
-        self.archive_filter_box.set(''); self.load_archive()
-
-if __name__ == "__main__":
-    root = tk.Tk(); app = WheelTableApp(root); root.mainloop()
+                sep = tk.
