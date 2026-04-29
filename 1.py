@@ -28,8 +28,11 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_cloud_data():
     try:
-        return conn.read(spreadsheet=SPREADSHEET_URL)
-    except:
+        # Пытаемся прочитать данные. TTL=0 означает не кэшировать (всегда свежие данные)
+        return conn.read(spreadsheet=SPREADSHEET_URL, ttl=0)
+    except Exception as e:
+        # Если не удалось прочитать (например, таблица пустая), 
+        # возвращаем пустой каркас с нужными именами колонок
         return pd.DataFrame(columns=["Дата", "Локо", "Ось", "Гр_Л", "Гр_П", "Пр_Л", "Пр_П", "qR_Л", "qR_П", "Банд_Л", "Банд_П"])
 
 st.title("🚂 ОБЛАЧНЫЙ УЧЕТ ПАРАМЕТРОВ КП")
