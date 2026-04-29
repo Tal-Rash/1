@@ -8,7 +8,7 @@ from datetime import datetime
 st.set_page_config(page_title="Учет КП v50.1", layout="wide")
 
 # --- ВАША ССЫЛКА ---
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhvCHgy-R5hgzeSurDFA7HPb8D4hQrdcITHeUcuPxa5fzx2BSVZXIWGyg9wZtrjQHL/exec"
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYLMw1smqeKRHZQFZsV35k2RqkR6bTmR1TiYPeSbYiVDb3KyGonYmdS7FohfxeCGKT/exec"
 
 # Ссылка для архива (чтение)
 SHEET_ID = "1HYkcxtOiEhV7-jOi6TGDxT-exQv78guO9g7b4JVBxAc"
