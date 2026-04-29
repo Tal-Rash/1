@@ -1,12 +1,11 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
+import sqlite3
 from datetime import datetime
 
-# Настройка страницы
-st.set_page_config(page_title="Учет КП 40.2 (Cloud)", layout="wide")
+st.set_page_config(page_title="Учет КП: Табличный ввод", layout="wide")
 
-# Инициализация базы данных (в облаке)
+# Инициализация базы
 def init_db():
     conn = sqlite3.connect("wheels_data.db", check_same_thread=False)
     cursor = conn.cursor()
@@ -20,65 +19,65 @@ def init_db():
 
 conn = init_db()
 
-# Цветовая индикация (логика из вашего последнего кода)
-def get_color(param, val):
-    limits = {
-        "Гребень": {"yellow": 26.0, "red": 25.0, "mode": "min"},
-        "Прокат": {"yellow": 5.0, "red": 7.0, "mode": "max"}
+st.title("📟 Табличный ввод замеров КП")
+
+# Верхняя панель (как в Windows версии)
+col1, col2, col3 = st.columns([2, 2, 4])
+loco = col1.text_input("Локомотив", placeholder="Номер")
+date_m = col2.date_input("Дата замера", datetime.now())
+
+# Авто-определение количества осей
+axes_count = 12 if len(loco) == 2 else 6
+
+# Создаем пустую таблицу (DataFrame) для ввода
+columns = ["Гр_Л", "Гр_П", "Пр_Л", "Пр_П", "qR_Л", "qR_П", "Банд_Л", "Банд_П"]
+df_input = pd.DataFrame(
+    0.0, 
+    index=[f"Ось {i+1}" for i in range(axes_count)], 
+    columns=columns
+)
+
+st.write(f"### Заполните таблицу для {axes_count} осей:")
+
+# РЕДАКТОР ТАБЛИЦЫ (Аналог сетки из Tkinter)
+edited_df = st.data_editor(
+    df_input,
+    use_container_width=True,
+    num_rows="fixed",
+    column_config={
+        col: st.column_config.NumberColumn(format="%.1f") for col in columns
     }
-    if param not in limits: return ""
-    lim = limits[param]
-    if lim["mode"] == "min":
-        if val <= lim["red"]: return "background-color: #ff6666"
-        if val <= lim["yellow"]: return "background-color: #ffff99"
+)
+
+# Кнопка сохранения
+if st.button("📥 СОХРАНИТЬ ВСЮ ТАБЛИЦУ В БАЗУ", use_container_width=True):
+    if not loco:
+        st.error("Ошибка: Не введен номер локомотива!")
     else:
-        if val >= lim["red"]: return "background-color: #ff6666"
-        if val >= lim["yellow"]: return "background-color: #ffff99"
-    return ""
-
-st.title("🚂 Учет КП: Версия 40.2 (Облачная)")
-
-menu = st.sidebar.radio("Меню", ["Ввод данных", "Анализ износа", "Архив"])
-
-if menu == "Ввод данных":
-    with st.form("input_form"):
-        col1, col2 = st.columns(2)
-        loco = col1.text_input("Локомотив")
-        date_m = col2.date_input("Дата", datetime.now())
-        
-        axes = 12 if len(loco) == 2 else 6
-        st.subheader(f"Ввод параметров для {axes} осей")
-        
-        all_rows = []
-        for i in range(1, axes + 1):
-            with st.expander(f"Ось №{i}"):
-                c1, c2, c3, c4 = st.columns(4)
-                fl = c1.number_input(f"Гр. Л ({i})", step=0.1, key=f"fl{i}")
-                fr = c2.number_input(f"Гр. П ({i})", step=0.1, key=f"fr{i}")
-                wl = c3.number_input(f"Пр. Л ({i})", step=0.1, key=f"wl{i}")
-                wr = c4.number_input(f"Пр. П ({i})", step=0.1, key=f"wr{i}")
-                all_rows.append((loco, i, fl, fr, wl, wr, 0.0, 0.0, 0.0, 0.0, date_m.strftime("%d.%m.%Y")))
-        
-        if st.form_submit_button("СОХРАНИТЬ"):
+        try:
+            # Превращаем таблицу в список строк для базы данных
+            data_to_save = []
+            for i, (idx, row) in enumerate(edited_df.iterrows(), start=1):
+                data_to_save.append((
+                    loco, i, 
+                    row["Гр_Л"], row["Гр_П"], 
+                    row["Пр_Л"], row["Пр_П"], 
+                    row["qR_Л"], row["qR_П"], 
+                    row["Банд_Л"], row["Банд_П"], 
+                    date_m.strftime("%d.%m.%Y")
+                ))
+            
             cur = conn.cursor()
-            cur.executemany("INSERT INTO measurements (loco_name, wheel_num, f_l, f_r, w_l, w_r, q_l, q_r, t_l, t_r, date) VALUES (?,?,?,?,?,?,?,?,?,?,?)", all_rows)
+            cur.executemany('''INSERT INTO measurements 
+                               (loco_name, wheel_num, f_l, f_r, w_l, w_r, q_l, q_r, t_l, t_r, date) 
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?)''', data_to_save)
             conn.commit()
-            st.success("Данные успешно добавлены!")
+            st.success(f"Данные по локомотиву {loco} успешно сохранены в облачную базу!")
+        except Exception as e:
+            st.error(f"Ошибка при сохранении: {e}")
 
-elif menu == "Анализ износа":
-    st.subheader("📊 Анализ изменения параметров")
-    loco_list = pd.read_sql("SELECT DISTINCT loco_name FROM measurements", conn)
-    target = st.selectbox("Выберите локомотив", loco_list)
-    
-    if target:
-        df = pd.read_sql(f"SELECT * FROM measurements WHERE loco_name='{target}' ORDER BY date ASC", conn)
-        if len(df['date'].unique()) >= 2:
-            st.write("Сравнение первого и последнего замеров:")
-            st.dataframe(df) # Здесь можно добавить логику вычитания как в оригинале
-        else:
-            st.info("Недостаточно данных для анализа (нужно минимум 2 замера)")
-
-elif menu == "Архив":
-    st.subheader("🗄️ Все записи в базе")
-    df_all = pd.read_sql("SELECT date, loco_name, wheel_num, f_l, f_r, w_l, w_r FROM measurements", conn)
-    st.dataframe(df_all, use_container_width=True)
+# Просмотр последних записей ниже
+st.divider()
+st.subheader("📋 Последние 10 записей из базы")
+history_df = pd.read_sql("SELECT date, loco_name, wheel_num, f_l, f_r FROM measurements ORDER BY id DESC LIMIT 10", conn)
+st.table(history_df)
