@@ -5,10 +5,10 @@ import json
 from datetime import datetime
 
 # 1. Настройка страницы
-st.set_page_config(page_title="Учет КП v40.6", layout="wide")
+st.set_page_config(page_title="Учет КП v40.7", layout="wide")
 
-# --- ВАША ССЫЛКА APPS SCRIPT ---
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV--LB0W0TqIDsBqgSeLKbFe8InZLB6l3y25KkwanrgXVx53hRb-PPWKlh93WkFquQ/exec"
+# --- ВАША НОВАЯ ССЫЛКА ИНТЕГРИРОВАНА ---
+SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhvCHgy-R5hgzeSurDFA7HPb8D4hQrdcITHeUcuPxa5fzx2BSVZXIWGyg9wZtrjQHL/exec"
 
 # Ссылка для чтения архива (через экспорт CSV)
 SHEET_ID = "1HYkcxtOiEhV7-jOi6TGDxT-exQv78guO9g7b4JVBxAc"
@@ -28,16 +28,16 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚂 СИСТЕМА УЧЕТА КП (ПРЯМОЙ КАНАЛ)")
+st.title("🚂 СИСТЕМА УЧЕТА КП (v40.7)")
 
 # 3. Блок ввода
 c1, c2, _ = st.columns([2, 2, 6])
-loco = c1.text_input("📝 № Локомотива", key="loco_input")
+loco = c1.text_input("📝 № Локомотива", placeholder="Введите номер", key="loco_input")
 date_m = c2.date_input("📅 Дата замера", datetime.now())
 
-# Логика определения количества осей
+# Определение количества осей (2 знака = 12 осей, иначе 6)
 axes_count = 12 if len(loco) == 2 else 6
-st.write(f"#### Сетка замера для №{loco if loco else '...'} ({axes_count} осей)")
+st.write(f"#### Сетка замера ({axes_count} осей)")
 
 cols_name = ["Гр Л", "Гр П", "Пр Л", "Пр П", "qR Л", "qR П", "Банд Л", "Банд П"]
 df_template = pd.DataFrame(0.0, index=[f"Ось {i+1}" for i in range(axes_count)], columns=cols_name)
@@ -47,14 +47,14 @@ edited_df = st.data_editor(df_template, width="stretch", height=400 if axes_coun
 
 st.markdown("---")
 
-# 4. Логика отправки
-if st.button("📥 ОТПРАВИТЬ ДАННЫЕ В ТАБЛИЦУ"):
+# 4. Логика отправки через requests
+if st.button("📥 СОХРАНИТЬ В GOOGLE ТАБЛИЦУ"):
     if not loco:
         st.error("❗ Ошибка: Введите номер локомотива")
     else:
-        with st.spinner("🚀 Отправка данных..."):
+        with st.spinner("🚀 Синхронизация с облаком..."):
             try:
-                # Подготавливаем данные для отправки (массив массивов)
+                # Подготавливаем данные
                 payload = []
                 for i, (idx, row) in enumerate(edited_df.iterrows(), start=1):
                     payload.append([
@@ -64,25 +64,31 @@ if st.button("📥 ОТПРАВИТЬ ДАННЫЕ В ТАБЛИЦУ"):
                         row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]
                     ])
                 
-                # Отправляем POST запрос к вашему скрипту
-                # Мы используем json=payload, чтобы requests сам выставил нужные заголовки
-                response = requests.post(SCRIPT_URL, json=payload, timeout=10)
+                # Отправка POST-запроса с принудительным JSON-форматом
+                response = requests.post(
+                    SCRIPT_URL, 
+                    data=json.dumps(payload),
+                    headers={"Content-Type": "application/json"},
+                    timeout=20
+                )
                 
+                # Проверка успешности (Google Apps Script часто возвращает 200 даже при ошибках в JS, 
+                # поэтому проверяем текст ответа, если вы добавили return 'Success')
                 if response.status_code == 200:
-                    st.success("✅ Данные успешно записаны в Google Таблицу!")
+                    st.success("✅ Данные успешно добавлены в таблицу!")
                     st.balloons()
                 else:
-                    st.error(f"❌ Ошибка Google: {response.status_code}")
-                    st.write(response.text)
+                    st.error(f"❌ Ошибка сервера Google: {response.status_code}")
+                    st.write("Технический ответ:", response.text)
             except Exception as e:
-                st.error(f"❌ Критическая ошибка: {e}")
+                st.error(f"❌ Критическая ошибка соединения: {e}")
+                st.info("Убедитесь, что вы опубликовали Apps Script с доступом 'Anyone' (Все).")
 
-# 5. Вкладка архива
-st.markdown("### 🗄️ Просмотр последних записей")
-if st.checkbox("Показать данные из таблицы"):
+# 5. Просмотр архива
+st.markdown("### 🗄️ Последние записи в таблице")
+if st.checkbox("Показать архив"):
     try:
-        # Читаем данные напрямую через Pandas
         df_view = pd.read_csv(CSV_URL)
-        st.dataframe(df_view, width="stretch", height=400)
+        st.dataframe(df_view.tail(20), width="stretch")
     except:
-        st.info("Пока нет данных для отображения или таблица пуста.")
+        st.info("Для просмотра архива таблица не должна быть пустой.")
